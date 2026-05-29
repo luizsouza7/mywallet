@@ -26,6 +26,7 @@ class TelaLogin(ctk.CTk):
     def _fechar(self):
         """Encerra a tela de login sem autenticar."""
         self.usuario_logado = None
+        self.withdraw()
         self.quit()
 
     def _criar_interface(self):
@@ -135,6 +136,7 @@ class TelaLogin(ctk.CTk):
         usuario = autenticar_usuario(email, senha)
         if usuario:
             self.usuario_logado = usuario
+            self.withdraw()
             self.quit()
         else:
             self._mostrar_mensagem("E-mail ou senha incorretos.")

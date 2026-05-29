@@ -9,7 +9,20 @@ from login import TelaLogin
 from dashboard import TelaDashboard
 from transactions import TelaTransacoes
 from charts import TelaGraficos
-from reports import exportar_csv
+from reports import exportar_csv, gerar_relatorio_pdf
+
+
+def _destruir_janela(janela):
+    """Destrói janela CustomTkinter sem conflito com timers internos."""
+    try:
+        janela.withdraw()
+        janela.update_idletasks()
+    except Exception:
+        pass
+    try:
+        janela.destroy()
+    except Exception:
+        pass
 
 
 class AplicacaoPrincipal(ctk.CTk):
@@ -29,7 +42,6 @@ class AplicacaoPrincipal(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self._fechar_janela)
 
         self._criar_layout()
-        # Atualiza dashboard após a janela estar totalmente carregada
         self.after(100, lambda: self._mostrar_tela("dashboard"))
 
     def _fechar_janela(self):
@@ -42,40 +54,47 @@ class AplicacaoPrincipal(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # ── Sidebar ──
-        self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color="#1e1e1e")
         self.sidebar.grid(row=0, column=0, sticky="nsew")
-        self.sidebar.grid_rowconfigure(7, weight=1)
+        self.sidebar.grid_rowconfigure(8, weight=1)
 
         ctk.CTkLabel(
             self.sidebar,
-            text="💰 MyWallet",
-            font=ctk.CTkFont(size=22, weight="bold"),
-        ).grid(row=0, column=0, padx=20, pady=(25, 5))
+            text="MyWallet",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color="#e4e4e7",
+        ).grid(row=0, column=0, padx=22, pady=(28, 2), sticky="w")
 
         ctk.CTkLabel(
             self.sidebar,
-            text=self.usuario["nome"][:20],
+            text=self.usuario["nome"][:22],
             font=ctk.CTkFont(size=12),
-            text_color="gray",
-        ).grid(row=1, column=0, padx=20, pady=(0, 25))
+            text_color="#71717a",
+        ).grid(row=1, column=0, padx=22, pady=(0, 16), sticky="w")
 
-        self.btn_dashboard = self._criar_botao_menu("📊  Dashboard", "dashboard", 2)
-        self.btn_transacoes = self._criar_botao_menu("💸  Movimentações", "transacoes", 3)
-        self.btn_graficos = self._criar_botao_menu("📈  Gráficos", "graficos", 4)
-        self.btn_exportar = self._criar_botao_menu("📄  Exportar CSV", "exportar", 5)
+        separador = ctk.CTkFrame(self.sidebar, height=1, fg_color="#3f3f46")
+        separador.grid(row=2, column=0, padx=18, pady=(0, 12), sticky="ew")
+
+        self.btn_dashboard = self._criar_botao_menu("Dashboard", "dashboard", 3)
+        self.btn_transacoes = self._criar_botao_menu("Movimentações", "transacoes", 4)
+        self.btn_graficos = self._criar_botao_menu("Gráficos", "graficos", 5)
+        self.btn_exportar = self._criar_botao_menu("Exportar CSV", "exportar", 6)
+        self.btn_pdf = self._criar_botao_menu("Relatório PDF", "pdf", 7)
 
         ctk.CTkButton(
             self.sidebar,
-            text="🚪  Sair",
+            text="Sair",
+            height=36,
+            corner_radius=8,
             fg_color="transparent",
             border_width=1,
-            text_color=("gray10", "gray90"),
-            hover_color=("gray70", "gray30"),
+            border_color="#3f3f46",
+            text_color="#a1a1aa",
+            hover_color="#2b2b2b",
+            font=ctk.CTkFont(size=13),
             command=self._sair,
-        ).grid(row=8, column=0, padx=20, pady=20, sticky="ew")
+        ).grid(row=9, column=0, padx=18, pady=(0, 22), sticky="ew")
 
-        # ── Área de conteúdo ──
         self.area_conteudo = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.area_conteudo.grid(row=0, column=1, sticky="nsew")
         self.area_conteudo.grid_columnconfigure(0, weight=1)
@@ -93,24 +112,29 @@ class AplicacaoPrincipal(ctk.CTk):
             tela.grid(row=0, column=0, sticky="nsew")
 
     def _criar_botao_menu(self, texto, destino, linha):
-        """Cria botão na sidebar."""
+        """Cria botão na sidebar com estilo discreto."""
         btn = ctk.CTkButton(
             self.sidebar,
             text=texto,
             anchor="w",
-            height=40,
+            height=36,
+            corner_radius=8,
             fg_color="transparent",
-            text_color=("gray10", "gray90"),
-            hover_color=("gray70", "gray30"),
+            text_color="#a1a1aa",
+            hover_color="#2b2b2b",
+            font=ctk.CTkFont(size=13),
             command=lambda: self._navegar(destino),
         )
-        btn.grid(row=linha, column=0, padx=15, pady=4, sticky="ew")
+        btn.grid(row=linha, column=0, padx=14, pady=2, sticky="ew")
         return btn
 
     def _navegar(self, destino):
         """Navega para tela ou executa ação."""
         if destino == "exportar":
             exportar_csv(self.usuario["id"], self.usuario["nome"].replace(" ", "_"))
+            return
+        if destino == "pdf":
+            gerar_relatorio_pdf(self.usuario)
             return
         self._mostrar_tela(destino)
 
@@ -143,9 +167,9 @@ class AplicacaoPrincipal(ctk.CTk):
         }
         for chave, btn in botoes.items():
             if chave == nome:
-                btn.configure(fg_color=("gray75", "gray25"))
+                btn.configure(fg_color="#2b2b2b", text_color="#e4e4e7")
             else:
-                btn.configure(fg_color="transparent")
+                btn.configure(fg_color="transparent", text_color="#a1a1aa")
 
     def _atualizar_tudo(self):
         """Atualiza dashboard quando transações mudam."""
@@ -165,13 +189,15 @@ def executar_app():
         login.mainloop()
 
         usuario = login.usuario_logado
-        login.destroy()
 
         if usuario is None:
+            _destruir_janela(login)
             break
 
         app = AplicacaoPrincipal(usuario)
         app.mainloop()
+
+        _destruir_janela(login)
 
         if not app.voltar_login:
             break

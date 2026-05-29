@@ -251,6 +251,71 @@ def obter_evolucao_financeira(usuario_id):
     return datas, saldos
 
 
+def contar_movimentacoes(usuario_id):
+    """Retorna a quantidade de movimentações do usuário."""
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM movimentacoes WHERE usuario_id = ?",
+        (usuario_id,),
+    )
+    total = cursor.fetchone()[0]
+    conn.close()
+    return total
+
+
+def obter_estatisticas_relatorio(usuario_id):
+    """
+    Retorna estatísticas para o relatório PDF.
+    maior_receita / maior_despesa: tupla (descricao, valor) ou None
+    categoria_maior_gasto: nome da categoria ou None
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT descricao, valor FROM movimentacoes
+        WHERE usuario_id = ? AND tipo = 'receita'
+        ORDER BY valor DESC LIMIT 1
+        """,
+        (usuario_id,),
+    )
+    maior_receita = cursor.fetchone()
+
+    cursor.execute(
+        """
+        SELECT descricao, valor FROM movimentacoes
+        WHERE usuario_id = ? AND tipo = 'despesa'
+        ORDER BY valor DESC LIMIT 1
+        """,
+        (usuario_id,),
+    )
+    maior_despesa = cursor.fetchone()
+
+    cursor.execute(
+        """
+        SELECT categoria, SUM(valor) AS total
+        FROM movimentacoes
+        WHERE usuario_id = ? AND tipo = 'despesa'
+        GROUP BY categoria
+        ORDER BY total DESC
+        LIMIT 1
+        """,
+        (usuario_id,),
+    )
+    cat_row = cursor.fetchone()
+    categoria_maior_gasto = cat_row[0] if cat_row else None
+
+    conn.close()
+
+    return {
+        "maior_receita": maior_receita,
+        "maior_despesa": maior_despesa,
+        "categoria_maior_gasto": categoria_maior_gasto,
+    }
+
+
 def data_hoje():
     """Retorna data atual no formato YYYY-MM-DD."""
     return datetime.now().strftime("%Y-%m-%d")
