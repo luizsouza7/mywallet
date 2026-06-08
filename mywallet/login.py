@@ -4,6 +4,7 @@ Tela de login e cadastro do MyWallet.
 
 import customtkinter as ctk
 from database import cadastrar_usuario, autenticar_usuario
+from theme import COR_DESPESA, COR_RECEITA, COR_TEXTO_SEC
 
 
 class TelaLogin(ctk.CTk):
@@ -36,7 +37,7 @@ class TelaLogin(ctk.CTk):
 
         ctk.CTkLabel(
             frame,
-            text="💰 MyWallet",
+            text="MyWallet",
             font=ctk.CTkFont(size=32, weight="bold"),
         ).pack(pady=(0, 5))
 
@@ -44,7 +45,7 @@ class TelaLogin(ctk.CTk):
             frame,
             text="Controle financeiro pessoal",
             font=ctk.CTkFont(size=14),
-            text_color="gray",
+            text_color=COR_TEXTO_SEC,
         ).pack(pady=(0, 30))
 
         self.abas = ctk.CTkTabview(frame, width=380, height=420)
@@ -56,7 +57,7 @@ class TelaLogin(ctk.CTk):
         self._criar_aba_cadastro()
 
         self.lbl_mensagem = ctk.CTkLabel(
-            frame, text="", font=ctk.CTkFont(size=12), text_color="#ff6b6b"
+            frame, text="", font=ctk.CTkFont(size=12), text_color=COR_DESPESA
         )
         self.lbl_mensagem.pack(pady=(10, 0))
 
@@ -111,7 +112,7 @@ class TelaLogin(ctk.CTk):
 
     def _mostrar_mensagem(self, texto, sucesso=False):
         """Exibe mensagem de feedback na tela."""
-        cor = "#4ade80" if sucesso else "#ff6b6b"
+        cor = COR_RECEITA if sucesso else COR_DESPESA
         self.lbl_mensagem.configure(text=texto, text_color=cor)
 
     def _fazer_login(self):

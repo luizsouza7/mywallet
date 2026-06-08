@@ -10,6 +10,14 @@ from dashboard import TelaDashboard
 from transactions import TelaTransacoes
 from charts import TelaGraficos
 from reports import exportar_csv, gerar_relatorio_pdf
+from theme import (
+    COR_ATIVO,
+    COR_BORDA,
+    COR_HOVER,
+    COR_SIDEBAR,
+    COR_TEXTO,
+    COR_TEXTO_SEC,
+)
 
 
 def _destruir_janela(janela):
@@ -54,32 +62,40 @@ class AplicacaoPrincipal(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color="#1e1e1e")
+        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color=COR_SIDEBAR)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
-        self.sidebar.grid_rowconfigure(8, weight=1)
+        self.sidebar.grid_rowconfigure(9, weight=1)
 
         ctk.CTkLabel(
             self.sidebar,
             text="MyWallet",
             font=ctk.CTkFont(size=20, weight="bold"),
-            text_color="#e4e4e7",
+            text_color=COR_TEXTO,
         ).grid(row=0, column=0, padx=22, pady=(28, 2), sticky="w")
 
         ctk.CTkLabel(
             self.sidebar,
             text=self.usuario["nome"][:22],
             font=ctk.CTkFont(size=12),
-            text_color="#71717a",
+            text_color=COR_TEXTO_SEC,
         ).grid(row=1, column=0, padx=22, pady=(0, 16), sticky="w")
 
-        separador = ctk.CTkFrame(self.sidebar, height=1, fg_color="#3f3f46")
+        separador = ctk.CTkFrame(self.sidebar, height=1, fg_color=COR_BORDA)
         separador.grid(row=2, column=0, padx=18, pady=(0, 12), sticky="ew")
 
         self.btn_dashboard = self._criar_botao_menu("Dashboard", "dashboard", 3)
         self.btn_transacoes = self._criar_botao_menu("Movimentações", "transacoes", 4)
         self.btn_graficos = self._criar_botao_menu("Gráficos", "graficos", 5)
-        self.btn_exportar = self._criar_botao_menu("Exportar CSV", "exportar", 6)
-        self.btn_pdf = self._criar_botao_menu("Relatório PDF", "pdf", 7)
+
+        ctk.CTkLabel(
+            self.sidebar,
+            text="EXPORTAR",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=COR_TEXTO_SEC,
+        ).grid(row=6, column=0, padx=22, pady=(14, 4), sticky="w")
+
+        self.btn_exportar = self._criar_botao_menu("Exportar CSV", "exportar", 7)
+        self.btn_pdf = self._criar_botao_menu("Exportar PDF", "pdf", 8)
 
         ctk.CTkButton(
             self.sidebar,
@@ -88,12 +104,12 @@ class AplicacaoPrincipal(ctk.CTk):
             corner_radius=8,
             fg_color="transparent",
             border_width=1,
-            border_color="#3f3f46",
-            text_color="#a1a1aa",
-            hover_color="#2b2b2b",
+            border_color=COR_BORDA,
+            text_color=COR_TEXTO_SEC,
+            hover_color=COR_HOVER,
             font=ctk.CTkFont(size=13),
             command=self._sair,
-        ).grid(row=9, column=0, padx=18, pady=(0, 22), sticky="ew")
+        ).grid(row=10, column=0, padx=18, pady=(0, 22), sticky="ew")
 
         self.area_conteudo = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.area_conteudo.grid(row=0, column=1, sticky="nsew")
@@ -120,8 +136,8 @@ class AplicacaoPrincipal(ctk.CTk):
             height=36,
             corner_radius=8,
             fg_color="transparent",
-            text_color="#a1a1aa",
-            hover_color="#2b2b2b",
+            text_color=COR_TEXTO_SEC,
+            hover_color=COR_HOVER,
             font=ctk.CTkFont(size=13),
             command=lambda: self._navegar(destino),
         )
@@ -167,9 +183,9 @@ class AplicacaoPrincipal(ctk.CTk):
         }
         for chave, btn in botoes.items():
             if chave == nome:
-                btn.configure(fg_color="#2b2b2b", text_color="#e4e4e7")
+                btn.configure(fg_color=COR_ATIVO, text_color=COR_TEXTO)
             else:
-                btn.configure(fg_color="transparent", text_color="#a1a1aa")
+                btn.configure(fg_color="transparent", text_color=COR_TEXTO_SEC)
 
     def _atualizar_tudo(self):
         """Atualiza dashboard quando transações mudam."""

@@ -3,7 +3,6 @@ Módulo de relatórios: exportação CSV e geração de PDF.
 """
 
 import csv
-import os
 from datetime import datetime
 from tkinter import filedialog, messagebox
 
@@ -20,17 +19,9 @@ from database import (
     obter_estatisticas_relatorio,
 )
 
-PASTA_RELATORIOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "relatorios")
-
-
 def _formatar_moeda(valor):
     """Formata valor como moeda brasileira."""
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-
-def _garantir_pasta_relatorios():
-    """Cria a pasta relatorios/ se não existir."""
-    os.makedirs(PASTA_RELATORIOS, exist_ok=True)
 
 
 def exportar_csv(usuario_id, nome_usuario="usuario"):
@@ -78,7 +69,7 @@ def exportar_csv(usuario_id, nome_usuario="usuario"):
 
 def gerar_relatorio_pdf(usuario):
     """
-    Gera relatório financeiro em PDF na pasta relatorios/.
+    Exporta relatório financeiro em PDF via diálogo de salvamento.
     usuario: dicionário com id, nome e email.
     Retorna True se gerou com sucesso.
     """
@@ -87,31 +78,39 @@ def gerar_relatorio_pdf(usuario):
 
     if not movimentacoes:
         messagebox.showinfo(
-            "Relatório PDF",
-            "Não há movimentações cadastradas.\n\n"
-            "Cadastre receitas ou despesas antes de gerar o relatório.",
+            "Exportar PDF",
+            "Não há movimentações para exportar.",
         )
         return False
 
+    nome_usuario = usuario["nome"].replace(" ", "_")
+    data_atual = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nome_sugerido = f"mywallet_{nome_usuario}_{data_atual}.pdf"
+
+    caminho = filedialog.asksaveasfilename(
+        defaultextension=".pdf",
+        filetypes=[("Arquivo PDF", "*.pdf"), ("Todos os arquivos", "*.*")],
+        initialfile=nome_sugerido,
+        title="Salvar relatório PDF",
+    )
+
+    if not caminho:
+        return False
+
     try:
-        _garantir_pasta_relatorios()
-
         agora = datetime.now()
-        nome_arquivo = agora.strftime("Relatorio_%Y-%m-%d_%H-%M.pdf")
-        caminho = os.path.join(PASTA_RELATORIOS, nome_arquivo)
-
         _criar_pdf(caminho, usuario, movimentacoes, agora)
 
         messagebox.showinfo(
-            "Relatório PDF",
-            f"Relatório gerado com sucesso!\n\n{caminho}",
+            "Exportar PDF",
+            f"Relatório exportado com sucesso!\n\n{caminho}",
         )
         return True
 
     except Exception as e:
         messagebox.showerror(
             "Erro",
-            f"Não foi possível gerar o relatório PDF.\n\nDetalhes: {e}",
+            f"Não foi possível exportar o relatório PDF.\n\nDetalhes: {e}",
         )
         return False
 

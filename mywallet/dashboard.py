@@ -1,144 +1,201 @@
 """
 Tela principal (Dashboard) do MyWallet.
-Exibe saldo, totais, gráfico resumido e movimentações recentes.
+Exibe saldo, totais, comparativo visual e movimentações recentes.
 """
 
 import customtkinter as ctk
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
+from datetime import datetime
 
 from database import calcular_resumo, contar_movimentacoes, listar_movimentacoes
+from theme import (
+    COR_BARRA_FUNDO,
+    COR_BORDA,
+    COR_DESPESA,
+    COR_FUNDO_CARD,
+    COR_NEUTRO,
+    COR_RECEITA,
+    COR_SALDO_NEG,
+    COR_SALDO_POS,
+    COR_TEXTO,
+    COR_TEXTO_MUTED,
+    COR_TEXTO_SEC,
+)
 
 
 class TelaDashboard(ctk.CTkFrame):
     """Painel inicial com resumo financeiro."""
 
-    COR_RECEITA = "#60a5fa"
-    COR_DESPESA = "#f87171"
-    COR_SALDO_POS = "#4ade80"
-    COR_SALDO_NEG = "#f87171"
-    COR_NEUTRO = "#a1a1aa"
-    COR_FUNDO = "#2b2b2b"
-    COR_BORDA = "#3f3f46"
-    COR_TEXTO_SEC = "#71717a"
-    COR_TEXTO = "#e4e4e7"
-
     def __init__(self, master, usuario):
         super().__init__(master, fg_color="transparent")
         self.usuario = usuario
-        self._canvas_grafico = None
         self._criar_interface()
 
     def _criar_interface(self):
-        """Monta layout: cards → gráfico → movimentações recentes."""
+        """Monta layout: saldo em destaque → cards → comparativo → recentes."""
         container = ctk.CTkScrollableFrame(self, fg_color="transparent")
         container.pack(fill="both", expand=True)
 
-        padx = 36
+        padx = 32
+
+        cabecalho = ctk.CTkFrame(container, fg_color="transparent")
+        cabecalho.pack(fill="x", padx=padx, pady=(28, 20))
+
+        col_titulo = ctk.CTkFrame(cabecalho, fg_color="transparent")
+        col_titulo.pack(side="left", fill="x", expand=True)
 
         ctk.CTkLabel(
-            container,
+            col_titulo,
             text="Dashboard",
-            font=ctk.CTkFont(size=24, weight="bold"),
-            text_color=self.COR_TEXTO,
-        ).pack(anchor="w", padx=padx, pady=(24, 4))
+            font=ctk.CTkFont(size=26, weight="bold"),
+            text_color=COR_TEXTO,
+        ).pack(anchor="w")
 
         ctk.CTkLabel(
-            container,
+            col_titulo,
             text=f"Olá, {self.usuario['nome']}",
             font=ctk.CTkFont(size=13),
-            text_color=self.COR_TEXTO_SEC,
-        ).pack(anchor="w", padx=padx, pady=(0, 24))
+            text_color=COR_TEXTO_SEC,
+        ).pack(anchor="w", pady=(4, 0))
+
+        ctk.CTkLabel(
+            cabecalho,
+            text=datetime.now().strftime("%d/%m/%Y"),
+            font=ctk.CTkFont(size=12),
+            text_color=COR_TEXTO_MUTED,
+        ).pack(side="right", anchor="ne")
+
+        self.card_saldo = self._criar_card_destaque(container, padx)
 
         self.frame_cards = ctk.CTkFrame(container, fg_color="transparent")
         self.frame_cards.pack(fill="x", padx=padx, pady=(0, 20))
-        for col in range(4):
+        for col in range(3):
             self.frame_cards.grid_columnconfigure(col, weight=1)
 
-        self.card_saldo, _ = self._criar_card(
-            self.frame_cards, "Saldo Atual", "R$ 0,00", self.COR_SALDO_POS, 0
-        )
         self.card_receitas, _ = self._criar_card(
-            self.frame_cards, "Total Recebido", "R$ 0,00", self.COR_RECEITA, 1
+            self.frame_cards, "Receitas", "R$ 0,00", COR_RECEITA, 0
         )
         self.card_despesas, _ = self._criar_card(
-            self.frame_cards, "Total Gasto", "R$ 0,00", self.COR_DESPESA, 2
+            self.frame_cards, "Despesas", "R$ 0,00", COR_DESPESA, 1
         )
         self.card_movimentacoes, _ = self._criar_card(
-            self.frame_cards, "Movimentações", "0 registros", self.COR_NEUTRO, 3
+            self.frame_cards, "Registros", "0", COR_NEUTRO, 2
         )
 
         self.frame_secao_grafico = ctk.CTkFrame(
             container,
-            corner_radius=14,
-            fg_color=self.COR_FUNDO,
+            corner_radius=12,
+            fg_color=COR_FUNDO_CARD,
             border_width=1,
-            border_color=self.COR_BORDA,
+            border_color=COR_BORDA,
         )
         self.frame_secao_grafico.pack(fill="x", padx=padx, pady=(0, 20))
 
         ctk.CTkLabel(
             self.frame_secao_grafico,
-            text="Resumo Financeiro",
+            text="Receitas x Despesas",
             font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=self.COR_TEXTO,
-        ).pack(anchor="w", padx=22, pady=(18, 4))
+            text_color=COR_TEXTO,
+        ).pack(anchor="w", padx=20, pady=(18, 2))
 
         ctk.CTkLabel(
             self.frame_secao_grafico,
-            text="Comparativo entre receitas e despesas",
+            text="Distribuição do período",
             font=ctk.CTkFont(size=11),
-            text_color=self.COR_TEXTO_SEC,
-        ).pack(anchor="w", padx=22, pady=(0, 6))
+            text_color=COR_TEXTO_MUTED,
+        ).pack(anchor="w", padx=20, pady=(0, 12))
 
-        self.frame_grafico = ctk.CTkFrame(
-            self.frame_secao_grafico, fg_color=self.COR_FUNDO, corner_radius=0
+        self.frame_barras = ctk.CTkFrame(
+            self.frame_secao_grafico, fg_color="transparent"
         )
-        self.frame_grafico.pack(fill="x", padx=12, pady=(0, 12))
+        self.frame_barras.pack(fill="x", padx=20, pady=(0, 20))
+
+        self.frame_secao_recentes = ctk.CTkFrame(
+            container,
+            corner_radius=12,
+            fg_color=COR_FUNDO_CARD,
+            border_width=1,
+            border_color=COR_BORDA,
+        )
+        self.frame_secao_recentes.pack(fill="x", padx=padx, pady=(0, 28))
 
         ctk.CTkLabel(
-            container,
+            self.frame_secao_recentes,
             text="Movimentações Recentes",
             font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=self.COR_TEXTO,
-        ).pack(anchor="w", padx=padx, pady=(0, 12))
+            text_color=COR_TEXTO,
+        ).pack(anchor="w", padx=20, pady=(18, 12))
 
-        self.frame_lista = ctk.CTkScrollableFrame(
-            container, height=240, fg_color="transparent", border_width=0
+        self.frame_lista = ctk.CTkFrame(
+            self.frame_secao_recentes, fg_color="transparent"
         )
-        self.frame_lista.pack(fill="x", padx=padx, pady=(0, 28))
+        self.frame_lista.pack(fill="x", padx=16, pady=(0, 16))
 
-    def _criar_card(self, parent, titulo, valor, cor, coluna):
-        """Cria card de resumo elegante e compacto."""
+    def _criar_card_destaque(self, parent, padx):
+        """Card principal com saldo em destaque."""
         card = ctk.CTkFrame(
             parent,
-            corner_radius=14,
-            fg_color=self.COR_FUNDO,
+            corner_radius=12,
+            fg_color=COR_FUNDO_CARD,
             border_width=1,
-            border_color=self.COR_BORDA,
+            border_color=COR_BORDA,
         )
-        card.grid(row=0, column=coluna, padx=5, pady=2, sticky="nsew")
+        card.pack(fill="x", padx=padx, pady=(0, 14))
 
         inner = ctk.CTkFrame(card, fg_color="transparent")
-        inner.pack(fill="both", expand=True, padx=18, pady=18)
+        inner.pack(fill="x", padx=22, pady=22)
 
         ctk.CTkLabel(
             inner,
-            text=titulo.upper(),
-            font=ctk.CTkFont(size=10, weight="bold"),
-            text_color=self.COR_TEXTO_SEC,
+            text="Saldo atual",
+            font=ctk.CTkFont(size=12),
+            text_color=COR_TEXTO_SEC,
+            anchor="w",
+        ).pack(anchor="w")
+
+        lbl_saldo = ctk.CTkLabel(
+            inner,
+            text="R$ 0,00",
+            font=ctk.CTkFont(size=34, weight="bold"),
+            text_color=COR_SALDO_POS,
+            anchor="w",
+        )
+        lbl_saldo.pack(anchor="w", pady=(6, 0))
+
+        return lbl_saldo
+
+    def _criar_card(self, parent, titulo, valor, cor, coluna):
+        """Cria card compacto de resumo."""
+        card = ctk.CTkFrame(
+            parent,
+            corner_radius=12,
+            fg_color=COR_FUNDO_CARD,
+            border_width=1,
+            border_color=COR_BORDA,
+        )
+        card.grid(row=0, column=coluna, padx=4, pady=2, sticky="nsew")
+
+        faixa = ctk.CTkFrame(card, height=3, corner_radius=0, fg_color=cor)
+        faixa.pack(fill="x")
+
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="both", expand=True, padx=16, pady=16)
+
+        ctk.CTkLabel(
+            inner,
+            text=titulo,
+            font=ctk.CTkFont(size=11),
+            text_color=COR_TEXTO_SEC,
             anchor="w",
         ).pack(anchor="w")
 
         lbl_valor = ctk.CTkLabel(
             inner,
             text=valor,
-            font=ctk.CTkFont(size=22, weight="bold"),
+            font=ctk.CTkFont(size=18, weight="bold"),
             text_color=cor,
             anchor="w",
         )
-        lbl_valor.pack(anchor="w", pady=(8, 0))
+        lbl_valor.pack(anchor="w", pady=(6, 0))
 
         return lbl_valor, card
 
@@ -156,88 +213,85 @@ class TelaDashboard(ctk.CTkFrame):
         self.card_receitas.configure(text=self._formatar_moeda(resumo["receitas"]))
         self.card_despesas.configure(text=self._formatar_moeda(resumo["despesas"]))
 
-        texto_registros = f"{total_mov} registro" if total_mov == 1 else f"{total_mov} registros"
+        texto_registros = str(total_mov)
         self.card_movimentacoes.configure(text=texto_registros)
 
-        cor_saldo = self.COR_SALDO_POS if resumo["saldo"] >= 0 else self.COR_SALDO_NEG
+        cor_saldo = COR_SALDO_POS if resumo["saldo"] >= 0 else COR_SALDO_NEG
         self.card_saldo.configure(text_color=cor_saldo)
-        self.card_receitas.configure(text_color=self.COR_RECEITA)
-        self.card_despesas.configure(text_color=self.COR_DESPESA)
-        self.card_movimentacoes.configure(text_color=self.COR_NEUTRO)
+        self.card_receitas.configure(text_color=COR_RECEITA)
+        self.card_despesas.configure(text_color=COR_DESPESA)
+        self.card_movimentacoes.configure(text_color=COR_NEUTRO)
 
-    def _limpar_grafico(self):
-        for widget in self.frame_grafico.winfo_children():
+    def _limpar_barras(self):
+        for widget in self.frame_barras.winfo_children():
             widget.destroy()
-        if self._canvas_grafico is not None:
-            plt.close(self._canvas_grafico.figure)
-            self._canvas_grafico = None
 
-    def _atualizar_grafico_resumo(self, resumo):
-        self._limpar_grafico()
+    def _criar_barra(self, parent, titulo, valor, max_valor, cor):
+        """Barra horizontal nativa — visual limpo sem matplotlib."""
+        bloco = ctk.CTkFrame(parent, fg_color="transparent")
+        bloco.pack(fill="x", pady=8)
+
+        linha_topo = ctk.CTkFrame(bloco, fg_color="transparent")
+        linha_topo.pack(fill="x")
+
+        ctk.CTkLabel(
+            linha_topo,
+            text=titulo,
+            font=ctk.CTkFont(size=12),
+            text_color=COR_TEXTO_SEC,
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            linha_topo,
+            text=self._formatar_moeda(valor),
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=cor,
+        ).pack(side="right")
+
+        proporcao = valor / max_valor if max_valor > 0 else 0
+        barra = ctk.CTkProgressBar(
+            bloco,
+            height=6,
+            corner_radius=3,
+            progress_color=cor,
+            fg_color=COR_BARRA_FUNDO,
+            border_width=0,
+        )
+        barra.set(min(proporcao, 1.0))
+        barra.pack(fill="x", pady=(8, 0))
+
+    def _atualizar_comparativo(self, resumo):
+        self._limpar_barras()
 
         receitas = resumo["receitas"]
         despesas = resumo["despesas"]
 
         if receitas == 0 and despesas == 0:
             ctk.CTkLabel(
-                self.frame_grafico,
+                self.frame_barras,
                 text="Nenhuma movimentação para exibir.",
-                text_color=self.COR_TEXTO_SEC,
+                text_color=COR_TEXTO_MUTED,
                 font=ctk.CTkFont(size=12),
-            ).pack(pady=28)
+            ).pack(pady=12)
             return
 
-        cor_fundo = self.COR_FUNDO
-        fig = Figure(figsize=(7.2, 2.0), dpi=100, facecolor=cor_fundo)
-        ax = fig.add_subplot(111)
-        ax.set_facecolor(cor_fundo)
-
-        categorias = ["Receitas", "Despesas"]
-        valores = [receitas, despesas]
-        cores = ["#4ade80", self.COR_DESPESA]
-
-        barras = ax.barh(categorias, valores, color=cores, height=0.38, edgecolor="none", alpha=0.88)
-
-        max_valor = max(valores) if max(valores) > 0 else 1
-        for barra, valor in zip(barras, valores):
-            ax.text(
-                barra.get_width() + max_valor * 0.015,
-                barra.get_y() + barra.get_height() / 2,
-                self._formatar_moeda(valor),
-                va="center",
-                ha="left",
-                color="#d4d4d8",
-                fontsize=9,
-            )
-
-        ax.set_xlim(0, max_valor * 1.22)
-        ax.tick_params(axis="x", colors="#71717a", labelsize=8, length=0)
-        ax.tick_params(axis="y", colors="#d4d4d8", labelsize=10, length=0)
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-        ax.grid(axis="x", linestyle="-", alpha=0.12, color="#71717a", linewidth=0.8)
-        ax.set_axisbelow(True)
-        fig.subplots_adjust(left=0.12, right=0.98, top=0.95, bottom=0.18)
-
-        self._canvas_grafico = FigureCanvasTkAgg(fig, master=self.frame_grafico)
-        self._canvas_grafico.draw()
-        widget = self._canvas_grafico.get_tk_widget()
-        widget.configure(bg=cor_fundo, highlightthickness=0, bd=0)
-        widget.pack(fill="x", padx=4, pady=4)
+        max_valor = max(receitas, despesas, 1)
+        self._criar_barra(self.frame_barras, "Receitas", receitas, max_valor, COR_RECEITA)
+        self._criar_barra(self.frame_barras, "Despesas", despesas, max_valor, COR_DESPESA)
 
     def _atualizar_lista_recentes(self):
         for widget in self.frame_lista.winfo_children():
             widget.destroy()
 
-        movimentacoes = listar_movimentacoes(self.usuario["id"], limite=8)
+        movimentacoes = listar_movimentacoes(self.usuario["id"], limite=6)
 
         if not movimentacoes:
             ctk.CTkLabel(
                 self.frame_lista,
                 text="Nenhuma movimentação cadastrada ainda.",
-                text_color=self.COR_TEXTO_SEC,
+                text_color=COR_TEXTO_MUTED,
                 font=ctk.CTkFont(size=12),
-            ).pack(pady=36)
+            ).pack(pady=24)
             return
 
         for mov in movimentacoes:
@@ -252,24 +306,23 @@ class TelaDashboard(ctk.CTkFrame):
         total_mov = contar_movimentacoes(self.usuario["id"])
 
         self._atualizar_cards(resumo, total_mov)
-        self._atualizar_grafico_resumo(resumo)
+        self._atualizar_comparativo(resumo)
 
         if self._widget_valido(self.frame_lista):
             self._atualizar_lista_recentes()
 
     def _adicionar_item_lista(self, descricao, valor, categoria, tipo, data):
-        cor = self.COR_RECEITA if tipo == "receita" else self.COR_DESPESA
+        cor = COR_RECEITA if tipo == "receita" else COR_DESPESA
         sinal = "+" if tipo == "receita" else "−"
 
         item = ctk.CTkFrame(
             self.frame_lista,
-            corner_radius=10,
-            height=58,
-            fg_color=self.COR_FUNDO,
-            border_width=1,
-            border_color=self.COR_BORDA,
+            corner_radius=8,
+            height=52,
+            fg_color="#1f1f23",
+            border_width=0,
         )
-        item.pack(fill="x", pady=5)
+        item.pack(fill="x", pady=3)
         item.pack_propagate(False)
 
         faixa = ctk.CTkFrame(item, width=3, corner_radius=0, fg_color=cor)
@@ -277,7 +330,7 @@ class TelaDashboard(ctk.CTkFrame):
         faixa.pack_propagate(False)
 
         conteudo = ctk.CTkFrame(item, fg_color="transparent")
-        conteudo.pack(side="left", fill="both", expand=True, padx=(14, 8), pady=10)
+        conteudo.pack(side="left", fill="both", expand=True, padx=(12, 8), pady=8)
 
         linha_topo = ctk.CTkFrame(conteudo, fg_color="transparent")
         linha_topo.pack(fill="x")
@@ -286,7 +339,7 @@ class TelaDashboard(ctk.CTkFrame):
             linha_topo,
             text=descricao,
             font=ctk.CTkFont(size=13, weight="bold"),
-            text_color=self.COR_TEXTO,
+            text_color=COR_TEXTO,
             anchor="w",
         ).pack(side="left")
 
@@ -301,6 +354,6 @@ class TelaDashboard(ctk.CTkFrame):
             conteudo,
             text=f"{categoria}  ·  {data}",
             font=ctk.CTkFont(size=11),
-            text_color=self.COR_TEXTO_SEC,
+            text_color=COR_TEXTO_MUTED,
             anchor="w",
         ).pack(anchor="w", pady=(2, 0))

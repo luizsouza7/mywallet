@@ -7,6 +7,14 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from database import calcular_resumo, obter_gastos_por_categoria, obter_evolucao_financeira
+from theme import (
+    COR_BORDA,
+    COR_DESPESA,
+    COR_FUNDO_CARD,
+    COR_RECEITA,
+    COR_TEXTO,
+    COR_TEXTO_MUTED,
+)
 
 
 class TelaGraficos(ctk.CTkFrame):
@@ -22,11 +30,14 @@ class TelaGraficos(ctk.CTkFrame):
     def _criar_interface(self):
         """Monta área dos gráficos."""
         ctk.CTkLabel(
-            self, text="Gráficos", font=ctk.CTkFont(size=28, weight="bold")
-        ).pack(anchor="w", padx=30, pady=(25, 15))
+            self,
+            text="Gráficos",
+            font=ctk.CTkFont(size=26, weight="bold"),
+            text_color=COR_TEXTO,
+        ).pack(anchor="w", padx=32, pady=(28, 16))
 
-        self.scroll = ctk.CTkScrollableFrame(self)
-        self.scroll.pack(fill="both", expand=True, padx=30, pady=(0, 20))
+        self.scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.scroll.pack(fill="both", expand=True, padx=32, pady=(0, 24))
 
     def _cancelar_render_agendado(self):
         """Cancela renderização pendente para evitar erro ao trocar de tela."""
@@ -67,7 +78,7 @@ class TelaGraficos(ctk.CTkFrame):
             ctk.CTkLabel(
                 self.scroll,
                 text="Cadastre movimentações para visualizar os gráficos.",
-                text_color="gray",
+                text_color=COR_TEXTO_MUTED,
                 font=ctk.CTkFont(size=14),
             ).pack(pady=60)
             return
@@ -99,15 +110,17 @@ class TelaGraficos(ctk.CTkFrame):
 
     def _estilo_figure(self):
         """Configura estilo escuro para os gráficos."""
-        fig = Figure(figsize=(7, 3.5), dpi=100, facecolor="#2b2b2b")
+        fig = Figure(figsize=(7, 3.2), dpi=100, facecolor=COR_FUNDO_CARD)
         ax = fig.add_subplot(111)
-        ax.set_facecolor("#1e1e1e")
-        ax.tick_params(colors="white", labelsize=9)
-        ax.xaxis.label.set_color("white")
-        ax.yaxis.label.set_color("white")
-        ax.title.set_color("white")
+        ax.set_facecolor(COR_FUNDO_CARD)
+        ax.tick_params(colors=COR_TEXTO_MUTED, labelsize=9, length=0)
+        ax.xaxis.label.set_color(COR_TEXTO_MUTED)
+        ax.yaxis.label.set_color(COR_TEXTO_MUTED)
+        ax.title.set_color(COR_TEXTO)
         for spine in ax.spines.values():
-            spine.set_color("#444")
+            spine.set_visible(False)
+        ax.grid(axis="y", linestyle="-", alpha=0.08, color=COR_TEXTO_MUTED)
+        ax.set_axisbelow(True)
         return fig, ax
 
     def _formatar_moeda(self, valor):
@@ -119,16 +132,27 @@ class TelaGraficos(ctk.CTkFrame):
             plt.close(fig)
             return
 
-        frame = ctk.CTkFrame(self.scroll, corner_radius=12)
-        frame.pack(fill="x", pady=10)
+        frame = ctk.CTkFrame(
+            self.scroll,
+            corner_radius=12,
+            fg_color=COR_FUNDO_CARD,
+            border_width=1,
+            border_color=COR_BORDA,
+        )
+        frame.pack(fill="x", pady=8)
 
         ctk.CTkLabel(
-            frame, text=titulo_frame, font=ctk.CTkFont(size=15, weight="bold")
-        ).pack(anchor="w", padx=15, pady=(12, 5))
+            frame,
+            text=titulo_frame,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=COR_TEXTO,
+        ).pack(anchor="w", padx=18, pady=(16, 4))
 
         canvas = FigureCanvasTkAgg(fig, master=frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="x", padx=10, pady=(0, 12))
+        widget = canvas.get_tk_widget()
+        widget.configure(bg=COR_FUNDO_CARD, highlightthickness=0, bd=0)
+        widget.pack(fill="x", padx=12, pady=(0, 14))
         self.canvas_widgets.append(canvas)
 
     def _grafico_receitas_despesas(self, resumo):
@@ -137,9 +161,9 @@ class TelaGraficos(ctk.CTkFrame):
 
         categorias = ["Receitas", "Despesas"]
         valores = [resumo["receitas"], resumo["despesas"]]
-        cores = ["#22c55e", "#ef4444"]
+        cores = [COR_RECEITA, COR_DESPESA]
 
-        barras = ax.bar(categorias, valores, color=cores, width=0.5, edgecolor="#333")
+        barras = ax.bar(categorias, valores, color=cores, width=0.45, edgecolor="none")
 
         margem = max(valores) * 0.05 if max(valores) > 0 else 0.5
         for barra, valor in zip(barras, valores):
@@ -149,7 +173,7 @@ class TelaGraficos(ctk.CTkFrame):
                 self._formatar_moeda(valor),
                 ha="center",
                 va="bottom",
-                color="white",
+                color=COR_TEXTO,
                 fontsize=9,
             )
 
@@ -166,7 +190,7 @@ class TelaGraficos(ctk.CTkFrame):
         valores = [g[1] for g in gastos]
 
         cores = plt.cm.Set2(range(len(categorias)))
-        ax.barh(categorias, valores, color=cores, edgecolor="#333")
+        ax.barh(categorias, valores, color=cores, edgecolor="none", height=0.55)
 
         ax.set_xlabel("Valor (R$)")
         ax.set_title("Gastos por Categoria", fontsize=12, pad=10)
@@ -178,8 +202,8 @@ class TelaGraficos(ctk.CTkFrame):
         fig, ax = self._estilo_figure()
 
         indices = list(range(len(datas)))
-        ax.plot(indices, saldos, color="#3b82f6", linewidth=2, marker="o", markersize=4)
-        ax.fill_between(indices, saldos, alpha=0.15, color="#3b82f6")
+        ax.plot(indices, saldos, color=COR_RECEITA, linewidth=2, marker="o", markersize=4)
+        ax.fill_between(indices, saldos, alpha=0.12, color=COR_RECEITA)
 
         ax.set_xticks(indices)
         if len(datas) > 5:
@@ -189,6 +213,6 @@ class TelaGraficos(ctk.CTkFrame):
 
         ax.set_ylabel("Saldo (R$)")
         ax.set_title("Evolução Financeira", fontsize=12, pad=10)
-        ax.axhline(y=0, color="#666", linestyle="--", linewidth=0.8)
+        ax.axhline(y=0, color=COR_TEXTO_MUTED, linestyle="--", linewidth=0.6, alpha=0.5)
         fig.tight_layout()
         self._embutir_grafico(fig, "Evolução do Saldo ao Longo do Tempo")

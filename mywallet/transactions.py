@@ -12,6 +12,14 @@ from database import (
     excluir_movimentacao,
     data_hoje,
 )
+from theme import (
+    COR_BORDA,
+    COR_DESPESA,
+    COR_FUNDO_CARD,
+    COR_RECEITA,
+    COR_TEXTO,
+    COR_TEXTO_MUTED,
+)
 
 
 class TelaTransacoes(ctk.CTkFrame):
@@ -27,18 +35,27 @@ class TelaTransacoes(ctk.CTkFrame):
     def _criar_interface(self):
         """Monta formulário e lista de movimentações."""
         ctk.CTkLabel(
-            self, text="Movimentações", font=ctk.CTkFont(size=28, weight="bold")
-        ).pack(anchor="w", padx=30, pady=(25, 15))
+            self,
+            text="Movimentações",
+            font=ctk.CTkFont(size=26, weight="bold"),
+            text_color=COR_TEXTO,
+        ).pack(anchor="w", padx=32, pady=(28, 16))
 
         # Layout em duas colunas
         container = ctk.CTkFrame(self, fg_color="transparent")
-        container.pack(fill="both", expand=True, padx=30, pady=(0, 20))
+        container.pack(fill="both", expand=True, padx=32, pady=(0, 24))
         container.grid_columnconfigure(0, weight=1)
         container.grid_columnconfigure(1, weight=2)
         container.grid_rowconfigure(0, weight=1)
 
         # ── Formulário ──
-        self.frame_form = ctk.CTkFrame(container, corner_radius=12)
+        self.frame_form = ctk.CTkFrame(
+            container,
+            corner_radius=12,
+            fg_color=COR_FUNDO_CARD,
+            border_width=1,
+            border_color=COR_BORDA,
+        )
         self.frame_form.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
 
         ctk.CTkLabel(
@@ -101,7 +118,13 @@ class TelaTransacoes(ctk.CTkFrame):
         self.btn_cancelar.pack_forget()
 
         # ── Lista ──
-        self.frame_lista = ctk.CTkFrame(container, corner_radius=12)
+        self.frame_lista = ctk.CTkFrame(
+            container,
+            corner_radius=12,
+            fg_color=COR_FUNDO_CARD,
+            border_width=1,
+            border_color=COR_BORDA,
+        )
         self.frame_lista.grid(row=0, column=1, sticky="nsew")
 
         ctk.CTkLabel(
@@ -252,7 +275,9 @@ class TelaTransacoes(ctk.CTkFrame):
 
         if not movimentacoes:
             ctk.CTkLabel(
-                self.scroll_lista, text="Nenhuma movimentação.", text_color="gray"
+                self.scroll_lista,
+                text="Nenhuma movimentação.",
+                text_color=COR_TEXTO_MUTED,
             ).pack(pady=30)
             return
 
@@ -262,10 +287,12 @@ class TelaTransacoes(ctk.CTkFrame):
 
     def _criar_item_lista(self, mov_id, descricao, valor, categoria, tipo, data):
         """Cria linha na lista com botões editar e excluir."""
-        item = ctk.CTkFrame(self.scroll_lista, corner_radius=8)
+        item = ctk.CTkFrame(
+            self.scroll_lista, corner_radius=8, fg_color="#1f1f23"
+        )
         item.pack(fill="x", pady=4)
 
-        cor = "#22c55e" if tipo == "receita" else "#ef4444"
+        cor = COR_RECEITA if tipo == "receita" else COR_DESPESA
         tipo_label = "Receita" if tipo == "receita" else "Despesa"
 
         info = ctk.CTkFrame(item, fg_color="transparent")
@@ -278,7 +305,7 @@ class TelaTransacoes(ctk.CTkFrame):
             info,
             text=f"{tipo_label} • {categoria} • {data}",
             font=ctk.CTkFont(size=11),
-            text_color="gray",
+            text_color=COR_TEXTO_MUTED,
             anchor="w",
         ).pack(anchor="w")
 
