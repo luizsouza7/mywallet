@@ -1,20 +1,16 @@
-# SmartFinance 💰
+# MyWallet 💰
 
-Sistema de controle financeiro pessoal desenvolvido em Python com interface gráfica.
-
----
+Sistema desktop de controle financeiro pessoal desenvolvido em Python.
 
 ## 🚀 Como executar
 
-### 1. Instalar as dependências
-
-Abra o terminal na pasta do projeto e execute:
+### 1. Instale as dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Executar o sistema
+### 2. Execute o sistema
 
 ```bash
 python main.py
@@ -22,20 +18,26 @@ python main.py
 
 ---
 
-## 🛠️ Tecnologias utilizadas
+## 🛠️ Tecnologias
 
 - Python
 - CustomTkinter
 - SQLite3
 - Matplotlib
+- ReportLab
 
 ---
 
 ## 📌 Funcionalidades
 
-- Cadastro e login
-- Cadastro de receitas e despesas
+- Login e cadastro de usuários
+- Controle de receitas e despesas
 - Dashboard financeiro
-- Gráficos financeiros
-- Exportação CSV
+- Gráficos e filtros por período
+- Exportação de dados em CSV
+- Geração de relatório financeiro em PDF
 - Banco de dados SQLite
+
+---
+
+Projeto desenvolvido para fins acadêmicos.
