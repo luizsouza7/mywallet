@@ -117,17 +117,54 @@ def adicionar_movimentacao(usuario_id, descricao, valor, categoria, tipo, data):
     conn.close()
 
 
-def listar_movimentacoes(usuario_id, limite=None):
+def _clausulas_filtro(data_inicio=None, data_fim=None, tipo=None, categoria=None, busca=None):
+    """Monta cláusulas SQL adicionais e parâmetros para filtros."""
+    clausulas = []
+    params = []
+
+    if data_inicio and data_fim:
+        clausulas.append("data BETWEEN ? AND ?")
+        params.extend([data_inicio, data_fim])
+
+    if tipo and tipo not in ("todos", "Todos"):
+        clausulas.append("tipo = ?")
+        params.append(tipo.lower())
+
+    if categoria and categoria not in ("todas", "Todas"):
+        clausulas.append("categoria = ?")
+        params.append(categoria)
+
+    if busca:
+        clausulas.append("LOWER(descricao) LIKE ?")
+        params.append(f"%{busca.lower()}%")
+
+    if not clausulas:
+        return "", []
+    return " AND " + " AND ".join(clausulas), params
+
+
+def listar_movimentacoes(
+    usuario_id,
+    limite=None,
+    data_inicio=None,
+    data_fim=None,
+    tipo=None,
+    categoria=None,
+    busca=None,
+):
     """Retorna lista de movimentações do usuário, da mais recente para a mais antiga."""
     conn = conectar()
     cursor = conn.cursor()
-    query = """
+    filtro_sql, filtro_params = _clausulas_filtro(
+        data_inicio, data_fim, tipo, categoria, busca
+    )
+    query = f"""
         SELECT id, descricao, valor, categoria, tipo, data
         FROM movimentacoes
-        WHERE usuario_id = ?
+        WHERE usuario_id = ?{filtro_sql}
         ORDER BY data DESC, id DESC
     """
-    params = [usuario_id]
+    params = [usuario_id] + filtro_params
     if limite is not None:
         query += " LIMIT ?"
         params.append(int(limite))
@@ -168,23 +205,30 @@ def excluir_movimentacao(mov_id, usuario_id):
     conn.close()
 
 
-def calcular_resumo(usuario_id):
+def calcular_resumo(usuario_id, data_inicio=None, data_fim=None):
     """
     Calcula saldo, total de receitas e total de despesas.
     Retorna dicionário com os valores.
     """
     conn = conectar()
     cursor = conn.cursor()
+    filtro_sql, filtro_params = _clausulas_filtro(data_inicio, data_fim)
 
     cursor.execute(
-        "SELECT COALESCE(SUM(valor), 0) FROM movimentacoes WHERE usuario_id = ? AND tipo = 'receita'",
-        (usuario_id,),
+        f"""
+        SELECT COALESCE(SUM(valor), 0) FROM movimentacoes
+        WHERE usuario_id = ? AND tipo = 'receita'{filtro_sql}
+        """,
+        (usuario_id, *filtro_params),
     )
     total_receitas = cursor.fetchone()[0]
 
     cursor.execute(
-        "SELECT COALESCE(SUM(valor), 0) FROM movimentacoes WHERE usuario_id = ? AND tipo = 'despesa'",
-        (usuario_id,),
+        f"""
+        SELECT COALESCE(SUM(valor), 0) FROM movimentacoes
+        WHERE usuario_id = ? AND tipo = 'despesa'{filtro_sql}
+        """,
+        (usuario_id, *filtro_params),
     )
     total_despesas = cursor.fetchone()[0]
 
@@ -198,45 +242,46 @@ def calcular_resumo(usuario_id):
     }
 
 
-def obter_gastos_por_categoria(usuario_id):
+def obter_gastos_por_categoria(usuario_id, data_inicio=None, data_fim=None):
     """Retorna totais de despesas agrupados por categoria."""
     conn = conectar()
     cursor = conn.cursor()
+    filtro_sql, filtro_params = _clausulas_filtro(data_inicio, data_fim)
     cursor.execute(
-        """
+        f"""
         SELECT categoria, SUM(valor)
         FROM movimentacoes
-        WHERE usuario_id = ? AND tipo = 'despesa'
+        WHERE usuario_id = ? AND tipo = 'despesa'{filtro_sql}
         GROUP BY categoria
         ORDER BY SUM(valor) DESC
         """,
-        (usuario_id,),
+        (usuario_id, *filtro_params),
     )
     dados = cursor.fetchall()
     conn.close()
     return dados
 
 
-def obter_evolucao_financeira(usuario_id):
+def obter_evolucao_financeira(usuario_id, data_inicio=None, data_fim=None):
     """
-    Retorna evolução do saldo acumulado por data.
+    Retorna evolução do saldo acumulado por data no período.
     Útil para gráfico de linha.
     """
     conn = conectar()
     cursor = conn.cursor()
+    filtro_sql, filtro_params = _clausulas_filtro(data_inicio, data_fim)
     cursor.execute(
-        """
+        f"""
         SELECT data, tipo, valor
         FROM movimentacoes
-        WHERE usuario_id = ?
+        WHERE usuario_id = ?{filtro_sql}
         ORDER BY data ASC, id ASC
         """,
-        (usuario_id,),
+        (usuario_id, *filtro_params),
     )
     movimentacoes = cursor.fetchall()
     conn.close()
 
-    # Calcula saldo acumulado dia a dia
     saldo_acumulado = {}
     saldo = 0
     for data, tipo, valor in movimentacoes:
@@ -251,17 +296,35 @@ def obter_evolucao_financeira(usuario_id):
     return datas, saldos
 
 
-def contar_movimentacoes(usuario_id):
+def contar_movimentacoes(usuario_id, data_inicio=None, data_fim=None):
     """Retorna a quantidade de movimentações do usuário."""
     conn = conectar()
     cursor = conn.cursor()
+    filtro_sql, filtro_params = _clausulas_filtro(data_inicio, data_fim)
     cursor.execute(
-        "SELECT COUNT(*) FROM movimentacoes WHERE usuario_id = ?",
-        (usuario_id,),
+        f"SELECT COUNT(*) FROM movimentacoes WHERE usuario_id = ?{filtro_sql}",
+        (usuario_id, *filtro_params),
     )
     total = cursor.fetchone()[0]
     conn.close()
     return total
+
+
+def obter_categorias(usuario_id):
+    """Retorna lista de categorias distintas do usuário."""
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT DISTINCT categoria FROM movimentacoes
+        WHERE usuario_id = ?
+        ORDER BY categoria ASC
+        """,
+        (usuario_id,),
+    )
+    categorias = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return categorias
 
 
 def obter_estatisticas_relatorio(usuario_id):
