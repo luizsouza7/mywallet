@@ -35,6 +35,15 @@ from theme import (
     RAIO_ITEM,
 )
 
+# Layout compartilhado entre cabeçalho e linhas (alinhamento consistente)
+_COLUNAS_TABELA = (
+    {"titulo": "Descrição", "minsize": 220, "weight": 1, "anchor": "w"},
+    {"titulo": "Categoria", "minsize": 130, "weight": 0, "anchor": "w"},
+    {"titulo": "Data", "minsize": 72, "weight": 0, "anchor": "w"},
+    {"titulo": "Valor", "minsize": 118, "weight": 0, "anchor": "e"},
+    {"titulo": "", "minsize": 88, "weight": 0, "anchor": "e"},
+)
+
 
 class ModalTransacao(ctk.CTkToplevel):
     """Janela modal para criar ou editar uma movimentação."""
@@ -327,31 +336,46 @@ class TelaTransacoes(ctk.CTkFrame):
         )
         self.frame_tabela.pack(fill="both", expand=True, padx=padx, pady=(0, ESPACO_MD))
 
-        self._criar_cabecalho_tabela()
+        self.header_tabela = ctk.CTkFrame(
+            self.frame_tabela, fg_color=COR_FUNDO_ITEM, corner_radius=RAIO_ITEM, height=38
+        )
+        # Margem extra à direita compensa a largura da scrollbar da lista
+        self.header_tabela.pack(fill="x", padx=(ESPACO_SM, ESPACO_SM + 14), pady=(ESPACO_SM, 6))
+        self.header_tabela.pack_propagate(False)
+        self._configurar_colunas(self.header_tabela)
+        self._preencher_cabecalho(self.header_tabela)
 
         self.scroll_lista = ctk.CTkScrollableFrame(
             self.frame_tabela, fg_color="transparent"
         )
-        self.scroll_lista.pack(fill="both", expand=True, padx=4, pady=(0, 8))
+        self.scroll_lista.pack(fill="both", expand=True, padx=ESPACO_SM, pady=(0, ESPACO_SM))
 
-    def _criar_cabecalho_tabela(self):
-        header = ctk.CTkFrame(self.frame_tabela, fg_color="transparent", height=36)
-        header.pack(fill="x", padx=ESPACO_SM, pady=(ESPACO_SM, 4))
-        header.pack_propagate(False)
-        header.grid_columnconfigure(0, weight=3)
-        header.grid_columnconfigure(1, weight=2)
-        header.grid_columnconfigure(2, weight=2)
-        header.grid_columnconfigure(3, weight=2)
-        header.grid_columnconfigure(4, weight=2)
+    def _configurar_colunas(self, frame):
+        for i, col in enumerate(_COLUNAS_TABELA):
+            frame.grid_columnconfigure(i, minsize=col["minsize"], weight=col["weight"])
 
-        for col, texto in enumerate(["Descrição", "Categoria", "Data", "Valor", ""]):
+    def _pad_coluna(self, col_idx):
+        if col_idx == 0:
+            return (14, 8)
+        if col_idx == len(_COLUNAS_TABELA) - 1:
+            return (4, 10)
+        return (8, 8)
+
+    def _preencher_cabecalho(self, header):
+        for i, col in enumerate(_COLUNAS_TABELA):
+            if not col["titulo"]:
+                continue
+            sticky = "ew" if col["anchor"] == "e" else "w"
             ctk.CTkLabel(
                 header,
-                text=texto,
+                text=col["titulo"],
                 font=ctk.CTkFont(size=11, weight="bold"),
                 text_color=COR_TEXTO_MUTED,
-                anchor="w",
-            ).grid(row=0, column=col, sticky="w", padx=(12 if col == 0 else 4, 0))
+                anchor=col["anchor"],
+            ).grid(
+                row=0, column=i, sticky=sticky,
+                padx=self._pad_coluna(i), pady=10,
+            )
 
     def _formatar_moeda(self, valor):
         return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -450,16 +474,18 @@ class TelaTransacoes(ctk.CTkFrame):
 
     def _criar_linha(self, mov_id, descricao, valor, categoria, tipo, data):
         cor = COR_RECEITA if tipo == "receita" else COR_DESPESA
-        data_fmt = data[5:10].replace("-", "/") if len(data) >= 10 else data
+        sinal = "+" if tipo == "receita" else "−"
+        data_fmt = data[8:10] + "/" + data[5:7] if len(data) >= 10 else data
 
         linha = ctk.CTkFrame(
             self.scroll_lista,
             corner_radius=RAIO_ITEM,
-            height=44,
+            height=48,
             fg_color="transparent",
         )
-        linha.pack(fill="x", pady=1)
+        linha.pack(fill="x", pady=2)
         linha.pack_propagate(False)
+        self._configurar_colunas(linha)
 
         def _hover_on(_):
             if linha.winfo_exists():
@@ -469,74 +495,95 @@ class TelaTransacoes(ctk.CTkFrame):
             if linha.winfo_exists():
                 linha.configure(fg_color="transparent")
 
-        linha.bind("<Enter>", _hover_on)
-        linha.bind("<Leave>", _hover_off)
+        for widget in (linha,):
+            widget.bind("<Enter>", _hover_on)
+            widget.bind("<Leave>", _hover_off)
 
-        linha.grid_columnconfigure(0, weight=3)
-        linha.grid_columnconfigure(1, weight=2)
-        linha.grid_columnconfigure(2, weight=2)
-        linha.grid_columnconfigure(3, weight=2)
-        linha.grid_columnconfigure(4, weight=2)
+        # Coluna 0 — descrição com indicador de tipo
+        cel_desc = ctk.CTkFrame(linha, fg_color="transparent")
+        cel_desc.grid(row=0, column=0, sticky="ew", padx=self._pad_coluna(0), pady=8)
 
-        ctk.CTkLabel(
-            linha,
+        indicador = ctk.CTkFrame(
+            cel_desc, width=8, height=8, corner_radius=4, fg_color=cor
+        )
+        indicador.pack(side="left", padx=(0, 10), pady=6)
+        indicador.pack_propagate(False)
+
+        lbl_desc = ctk.CTkLabel(
+            cel_desc,
             text=descricao,
-            font=ctk.CTkFont(size=13),
+            font=ctk.CTkFont(size=14),
             text_color=COR_TEXTO,
             anchor="w",
-        ).grid(row=0, column=0, sticky="w", padx=(12, 4), pady=10)
+        )
+        lbl_desc.pack(side="left", fill="x", expand=True)
+        lbl_desc.bind("<Enter>", _hover_on)
+        lbl_desc.bind("<Leave>", _hover_off)
 
-        ctk.CTkLabel(
+        # Coluna 1 — categoria
+        lbl_cat = ctk.CTkLabel(
             linha,
             text=categoria,
-            font=ctk.CTkFont(size=12),
+            font=ctk.CTkFont(size=13),
             text_color=COR_TEXTO_SEC,
             anchor="w",
-        ).grid(row=0, column=1, sticky="w", padx=4, pady=10)
+        )
+        lbl_cat.grid(row=0, column=1, sticky="w", padx=self._pad_coluna(1), pady=8)
+        lbl_cat.bind("<Enter>", _hover_on)
+        lbl_cat.bind("<Leave>", _hover_off)
 
-        ctk.CTkLabel(
+        # Coluna 2 — data
+        lbl_data = ctk.CTkLabel(
             linha,
             text=data_fmt,
-            font=ctk.CTkFont(size=12),
+            font=ctk.CTkFont(size=13),
             text_color=COR_TEXTO_MUTED,
             anchor="w",
-        ).grid(row=0, column=2, sticky="w", padx=4, pady=10)
+        )
+        lbl_data.grid(row=0, column=2, sticky="w", padx=self._pad_coluna(2), pady=8)
+        lbl_data.bind("<Enter>", _hover_on)
+        lbl_data.bind("<Leave>", _hover_off)
 
-        ctk.CTkLabel(
+        # Coluna 3 — valor (alinhado à direita)
+        lbl_valor = ctk.CTkLabel(
             linha,
-            text=self._formatar_moeda(valor),
-            font=ctk.CTkFont(size=13, weight="bold"),
+            text=f"{sinal} {self._formatar_moeda(valor)}",
+            font=ctk.CTkFont(size=14, weight="bold"),
             text_color=cor,
-            anchor="w",
-        ).grid(row=0, column=3, sticky="w", padx=4, pady=10)
+            anchor="e",
+        )
+        lbl_valor.grid(row=0, column=3, sticky="e", padx=self._pad_coluna(3), pady=8)
+        lbl_valor.bind("<Enter>", _hover_on)
+        lbl_valor.bind("<Leave>", _hover_off)
 
+        # Coluna 4 — ações
         acoes = ctk.CTkFrame(linha, fg_color="transparent")
-        acoes.grid(row=0, column=4, sticky="e", padx=(4, 12), pady=6)
+        acoes.grid(row=0, column=4, sticky="e", padx=self._pad_coluna(4), pady=6)
 
         ctk.CTkButton(
             acoes,
             text="✏️",
-            width=32,
-            height=32,
+            width=34,
+            height=34,
             corner_radius=8,
             fg_color="transparent",
             hover_color=COR_FUNDO_ITEM,
             text_color=COR_ACENTO,
-            font=ctk.CTkFont(size=14),
+            font=ctk.CTkFont(size=15),
             command=lambda: self._abrir_modal_editar(
                 mov_id, descricao, valor, categoria, tipo, data
             ),
-        ).pack(side="left", padx=2)
+        ).pack(side="left", padx=1)
 
         ctk.CTkButton(
             acoes,
             text="🗑️",
-            width=32,
-            height=32,
+            width=34,
+            height=34,
             corner_radius=8,
             fg_color="transparent",
             hover_color=COR_FUNDO_ITEM,
             text_color=COR_DESPESA,
-            font=ctk.CTkFont(size=14),
+            font=ctk.CTkFont(size=15),
             command=lambda: self._excluir(mov_id),
-        ).pack(side="left", padx=2)
+        ).pack(side="left", padx=1)
