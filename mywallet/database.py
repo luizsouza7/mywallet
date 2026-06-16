@@ -3,12 +3,13 @@ Módulo de banco de dados SQLite do MyWallet.
 Responsável por criar tabelas e executar operações CRUD.
 """
 
-import sqlite3
 import hashlib
+import sqlite3
 from datetime import datetime
+from pathlib import Path
 
 # Nome do arquivo do banco (criado automaticamente na primeira execução)
-DB_NAME = "mywallet.db"
+DB_NAME = Path(__file__).resolve().parent / "mywallet.db"
 
 
 def conectar():
@@ -61,6 +62,7 @@ def cadastrar_usuario(nome, email, senha):
     Cadastra novo usuário.
     Retorna (True, mensagem) em sucesso ou (False, mensagem) em erro.
     """
+    conn = None
     try:
         conn = conectar()
         cursor = conn.cursor()
@@ -69,12 +71,14 @@ def cadastrar_usuario(nome, email, senha):
             (nome.strip(), email.strip().lower(), hash_senha(senha)),
         )
         conn.commit()
-        conn.close()
         return True, "Cadastro realizado com sucesso!"
     except sqlite3.IntegrityError:
         return False, "Este e-mail já está cadastrado."
     except Exception as e:
         return False, f"Erro ao cadastrar: {e}"
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def autenticar_usuario(email, senha):
