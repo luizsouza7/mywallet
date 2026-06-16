@@ -13,7 +13,7 @@ pip install -r requirements.txt
 ### 2. Execute o sistema
 
 ```bash
-python main.py
+python mywallet/main.py
 ```
 
 ---

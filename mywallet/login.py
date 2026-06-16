@@ -3,7 +3,7 @@ Tela de login e cadastro do MyWallet.
 """
 
 import customtkinter as ctk
-from database import cadastrar_usuario, autenticar_usuario
+from database import autenticar_usuario, cadastrar_usuario, inicializar_banco
 from theme import (
     COR_ACENTO,
     COR_ATIVO,
@@ -31,11 +31,12 @@ class TelaLogin(ctk.CTk):
         self._processando = False
 
         self.title("MyWallet - Login")
-        self.geometry("440x600")
+        self.geometry("440x720")
         self.resizable(False, False)
 
         self.protocol("WM_DELETE_WINDOW", self._fechar)
 
+        inicializar_banco()
         self._criar_interface()
 
     def _fechar(self):
@@ -74,7 +75,16 @@ class TelaLogin(ctk.CTk):
             text="Controle financeiro pessoal",
             font=ctk.CTkFont(size=14),
             text_color=COR_TEXTO_SEC,
-        ).pack(pady=(0, ESPACO_MD))
+        ).pack(pady=(0, 12))
+
+        self.lbl_mensagem = ctk.CTkLabel(
+            frame,
+            text="",
+            height=28,
+            font=ctk.CTkFont(size=12),
+            text_color=COR_DESPESA,
+        )
+        self.lbl_mensagem.pack(fill="x", pady=(0, 12))
 
         card = ctk.CTkFrame(
             frame,
@@ -84,20 +94,13 @@ class TelaLogin(ctk.CTk):
         )
         card.pack(fill="both", expand=True)
 
-        self.abas = ctk.CTkTabview(
-            card, width=360, height=380, corner_radius=RAIO_BOTAO
-        )
+        self.abas = ctk.CTkTabview(card, width=360, height=500, corner_radius=RAIO_BOTAO)
         self.abas.pack(fill="both", expand=True, padx=ESPACO_MD, pady=ESPACO_MD)
         self.abas.add("Login")
         self.abas.add("Cadastro")
 
         self._criar_aba_login()
         self._criar_aba_cadastro()
-
-        self.lbl_mensagem = ctk.CTkLabel(
-            frame, text="", font=ctk.CTkFont(size=12), text_color=COR_DESPESA
-        )
-        self.lbl_mensagem.pack(pady=(12, 0))
 
     def _estilizar_campo(self, aba, rotulo, entry):
         ctk.CTkLabel(
@@ -106,14 +109,14 @@ class TelaLogin(ctk.CTk):
             anchor="w",
             font=ctk.CTkFont(size=12),
             text_color=COR_TEXTO_SEC,
-        ).pack(fill="x", padx=20, pady=(12, 0))
+        ).pack(fill="x", padx=20, pady=(8, 0))
         entry.configure(
             width=300,
             height=38,
             corner_radius=RAIO_BOTAO,
             border_width=0,
         )
-        entry.pack(padx=20, pady=(6, 4))
+        entry.pack(padx=20, pady=(4, 2))
 
     def _criar_aba_login(self):
         aba = self.abas.tab("Login")
@@ -135,7 +138,7 @@ class TelaLogin(ctk.CTk):
             font=ctk.CTkFont(size=15, weight="bold"),
             command=self._fazer_login,
         )
-        self.btn_entrar.pack(padx=20, pady=(20, 10))
+        self.btn_entrar.pack(padx=20, pady=(18, 0))
 
         self.entry_login_senha.bind("<Return>", lambda e: self._fazer_login())
 
@@ -153,7 +156,7 @@ class TelaLogin(ctk.CTk):
         )
         self._estilizar_campo(aba, "Senha", self.entry_cad_senha)
 
-        ctk.CTkButton(
+        self.btn_cadastrar = ctk.CTkButton(
             aba,
             text="Criar conta",
             width=300,
@@ -163,11 +166,13 @@ class TelaLogin(ctk.CTk):
             hover_color=COR_BOTAO_PRIMARIO_HOVER,
             font=ctk.CTkFont(size=15, weight="bold"),
             command=self._fazer_cadastro,
-        ).pack(padx=20, pady=(16, 10))
+        )
+        self.btn_cadastrar.pack(padx=20, pady=(18, 0))
 
     def _mostrar_mensagem(self, texto, sucesso=False):
         cor = COR_RECEITA if sucesso else COR_DESPESA
         self.lbl_mensagem.configure(text=texto, text_color=cor)
+        self.update_idletasks()
 
     def _fazer_login(self):
         if self._processando:
@@ -187,17 +192,26 @@ class TelaLogin(ctk.CTk):
         self._processando = True
         self.btn_entrar.configure(state="disabled")
 
-        usuario = autenticar_usuario(email, senha)
-        if usuario:
-            self.usuario_logado = usuario
-            self.withdraw()
-            self.quit()
-        else:
+        try:
+            usuario = autenticar_usuario(email, senha)
+            if usuario:
+                self.usuario_logado = usuario
+                self.withdraw()
+                self.quit()
+                return
+
             self._mostrar_mensagem("E-mail ou senha incorretos.")
+        except Exception as e:
+            self._mostrar_mensagem(f"Erro ao entrar: {e}")
+        finally:
             self._processando = False
-            self.btn_entrar.configure(state="normal")
+            if self.winfo_exists():
+                self.btn_entrar.configure(state="normal")
 
     def _fazer_cadastro(self):
+        if self._processando:
+            return
+
         nome = self.entry_cad_nome.get().strip()
         email = self.entry_cad_email.get().strip()
         senha = self.entry_cad_senha.get()
@@ -214,11 +228,21 @@ class TelaLogin(ctk.CTk):
             self._mostrar_mensagem("A senha deve ter pelo menos 4 caracteres.")
             return
 
-        sucesso, mensagem = cadastrar_usuario(nome, email, senha)
-        if sucesso:
-            self._mostrar_mensagem(mensagem, sucesso=True)
-            self.abas.set("Login")
-            self.entry_login_email.delete(0, "end")
-            self.entry_login_email.insert(0, email)
-        else:
-            self._mostrar_mensagem(mensagem)
+        self._processando = True
+        self.btn_cadastrar.configure(state="disabled")
+
+        try:
+            sucesso, mensagem = cadastrar_usuario(nome, email, senha)
+            if sucesso:
+                self._mostrar_mensagem(mensagem, sucesso=True)
+                self.abas.set("Login")
+                self.entry_login_email.delete(0, "end")
+                self.entry_login_email.insert(0, email)
+            else:
+                self._mostrar_mensagem(mensagem)
+        except Exception as e:
+            self._mostrar_mensagem(f"Erro ao cadastrar: {e}")
+        finally:
+            self._processando = False
+            if self.winfo_exists():
+                self.btn_cadastrar.configure(state="normal")

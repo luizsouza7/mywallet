@@ -162,6 +162,30 @@ def _cancelar_animacoes_botoes(janela):
 
 
 
+def _cancelar_timers_tk(janela):
+
+    """Cancela callbacks agendados pelo Tk/CustomTkinter antes do destroy."""
+
+    try:
+
+        timers = janela.tk.call("after", "info")
+
+    except Exception:
+
+        return
+
+    for timer in timers:
+
+        try:
+
+            janela.after_cancel(timer)
+
+        except Exception:
+
+            pass
+
+
+
 def _destruir_janela(janela):
 
     """Destrói janela CustomTkinter sem conflito com timers internos."""
@@ -169,6 +193,8 @@ def _destruir_janela(janela):
     try:
 
         _cancelar_animacoes_botoes(janela)
+
+        _cancelar_timers_tk(janela)
 
         janela.withdraw()
 
