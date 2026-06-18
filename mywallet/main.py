@@ -268,6 +268,8 @@ class AplicacaoPrincipal(ctk.CTk):
 
         self.minsize(1020, 640)
 
+        self.resizable(True, True)
+
 
 
         self.protocol("WM_DELETE_WINDOW", self._fechar_janela)

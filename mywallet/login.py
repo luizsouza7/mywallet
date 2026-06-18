@@ -32,7 +32,8 @@ class TelaLogin(ctk.CTk):
 
         self.title("MyWallet - Login")
         self.geometry("440x720")
-        self.resizable(False, False)
+        self.minsize(420, 640)
+        self.resizable(True, True)
 
         self.protocol("WM_DELETE_WINDOW", self._fechar)
 

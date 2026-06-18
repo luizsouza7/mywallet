@@ -57,7 +57,8 @@ class ModalTransacao(ctk.CTkToplevel):
         titulo = "Editar transação" if dados_edicao else "Nova transação"
         self.title(titulo)
         self.geometry("420x480")
-        self.resizable(False, False)
+        self.minsize(400, 480)
+        self.resizable(True, True)
         self.configure(fg_color=COR_FUNDO_CARD)
         self.transient(master.winfo_toplevel())
         self.grab_set()
