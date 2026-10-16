@@ -6,9 +6,12 @@ from pathlib import Path
 
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "data" / "mywallet.sqlite3"
 
+def database_path():
+    return Path(os.environ.get("MYWALLET_DB_PATH", str(DEFAULT_PATH)))
+
 @contextmanager
 def session():
-    path = Path(os.environ.get("MYWALLET_DB_PATH", str(DEFAULT_PATH)))
+    path = database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path, timeout=10)
     conn.row_factory = sqlite3.Row
