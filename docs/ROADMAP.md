@@ -12,7 +12,8 @@
 
 ## Uso pessoal confiável
 - [ ] Testar em iPhone real, acessibilidade e interações
-- [ ] Migrador com backup e conferência do SQLite antigo
+- [x] Migrador opt-in de lançamentos desktop, com simulação e prevenção de duplicatas
+- [ ] Teste de migração com banco real após backups e conferência manual
 - [ ] Transferências vinculadas entre contas sem dupla contagem
 - [ ] Busca/filtros/paginação na interface e desfazer importação
 - [ ] Adaptadores CSV/OFX por banco, conciliação com entradas manuais

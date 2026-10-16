@@ -54,7 +54,11 @@ Selecione a conta, envie CSV/OFX (máximo 3 MB), confira a prévia e confirme as
 
 O manifesto da web permite uma experiência de instalação em navegadores compatíveis, mas **não existe modo offline completo nem sincronização entre servidores**. A sincronização PC/celular exige usar uma única instalação de API com banco persistente e acesso seguro. A lista de transações mostra 500 itens recentes por enquanto. Não há cartão de crédito, parcelamentos ou Open Finance nesta primeira entrega.
 
-Os dados do SQLite da edição antiga **não são migrados automaticamente**; faça um backup antes de qualquer migração.
+Para migrar lançamentos do SQLite desktop, crie primeiro uma nova conta web com o mesmo e-mail e execute em backend/: 
+
+    python -m scripts.migrate_desktop --legacy-db CAMINHO/DO/mywallet.db --email seu@email.com
+
+Confira a simulação (sem gravação); para importar, repita acrescentando --apply. **Senhas antigas não são copiadas e o SQLite original é aberto somente para leitura.** Faça backup dos dois bancos antes da migração. O migrador cria uma conta separada chamada 'Importado do MyWallet Desktop'.
 
 Veja docs/ROADMAP.md para próximos ciclos.
 
