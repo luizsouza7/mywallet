@@ -3,16 +3,28 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# Banco de dados local
+# Bancos e relatórios
 *.db
-
-# Relatórios gerados
+*.sqlite
+*.sqlite3
+backend/data/
 mywallet/relatorios/*.pdf
 
-# Ambiente virtual
+# Ambientes
 .venv/
 venv/
 env/
+.env
+.env.local
+!.env.example
+backend/.pytest_cache/
+.pytest_cache/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
 
 # IDE
 .vscode/
